@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::unwrap_used)]
+#![forbid(unused_must_use)]
 use anyhow::Context;
 
 mod connection;
