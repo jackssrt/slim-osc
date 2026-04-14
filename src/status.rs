@@ -3,7 +3,7 @@ use chrono::Local;
 use sysinfo::System;
 use tokio::process::Command;
 
-use crate::config::{Component, Config};
+use crate::config::{Component, Config, MusicBackend};
 
 pub async fn get_status_text(config: &Config, system: &System) -> anyhow::Result<String> {
     let mut parts = Vec::new();
@@ -38,14 +38,26 @@ async fn get_component_text(
         Component::Command { command } => {
             get_command_output(Command::new("sh").arg("-c").arg(command)).await?
         }
-        Component::Playerctl { metadata_field } => {
-            get_command_output(
-                Command::new("playerctl")
-                    .arg("metadata")
-                    .arg(metadata_field),
-            )
-            .await?
-        }
+        Component::Music { metadata_field } => match config.music_backend {
+            #[cfg(target_os = "linux")]
+            MusicBackend::Playerctl => {
+                get_command_output(
+                    Command::new("playerctl")
+                        .arg("metadata")
+                        .arg(metadata_field),
+                )
+                .await?
+            }
+            MusicBackend::Mpd => {
+                get_command_output(
+                    Command::new("mpc")
+                        .arg("-f")
+                        .arg(format!("%{metadata_field}%"))
+                        .arg("current"),
+                )
+                .await?
+            }
+        },
         Component::CpuModel => system.cpus()[0].brand().to_string(),
         Component::CpuUsage => format!("{:.0}%", system.global_cpu_usage()),
         Component::GpuModel => gfxinfo::active_gpu()

@@ -13,6 +13,8 @@ pub struct Config {
     pub default_separator: String,
     #[serde(default = "default_update_interval")]
     pub update_interval: Duration,
+    #[serde(default)]
+    pub music_backend: MusicBackend,
 }
 
 fn default_address() -> IpAddr {
@@ -52,7 +54,7 @@ pub enum Component {
     GpuModel,
     CpuModel,
 
-    Playerctl {
+    Music {
         #[serde(alias = "metadata")]
         metadata_field: String,
     },
@@ -64,6 +66,16 @@ pub enum Component {
 
     #[serde(untagged)]
     Text(String),
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum MusicBackend {
+    // maybe replace with raw mpris later?
+    #[cfg(target_os = "linux")]
+    #[default]
+    Playerctl,
+    Mpd,
 }
 
 impl Config {
