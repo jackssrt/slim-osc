@@ -20,7 +20,10 @@ async fn main() -> anyhow::Result<()> {
     // parse args
     let args = Args::parse();
     // parse config
-    let config = Config::new(args.config_path).context("failed to read config")?;
+    // yes this is leaking memory but it's okay trust
+    let config: &'static Config = Box::leak(Box::new(
+        Config::new(args.config_path).context("failed to read config")?,
+    ));
 
     // open up connection
     let socket = connection::open(&config)
@@ -31,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let mut interval = tokio::time::interval(config.update_interval);
     loop {
         interval.tick().await;
-        let status = get_status_text(&config);
+        let status = get_status_text(&config).await?;
         send_chat_message(&socket, &status).await?;
     }
 }

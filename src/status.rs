@@ -1,20 +1,39 @@
 use std::fmt::Display;
 
+use anyhow::Context;
 use chrono::Local;
+use tokio::task::JoinError;
 
 use crate::config::{Component, Config};
 
-pub async fn get_status_text(config: &Config) -> String {
-    config
+pub async fn get_status_text(config: &'static Config) -> anyhow::Result<String> {
+    let mut parts = Vec::new();
+    for part in config
         .components
         .iter()
-        .map(|component| match component {
-            Component::Text { text } => text.clone(),
-            Component::Separator { separator } => separator
-                .clone()
-                .unwrap_or_else(|| config.default_separator.clone()),
-            Component::DateTime { format } => Local::now().format(format).to_string(),
-            _ => todo!(),
-        })
-        .collect()
+        .map(|component| tokio::spawn(get_component_text(component, config)))
+    {
+        parts.push(part.await??);
+    }
+
+    Ok(parts.join(""))
+}
+
+async fn get_component_text(component: &Component, config: &Config) -> anyhow::Result<String> {
+    Ok(match component {
+        Component::Text { text } => text.clone(),
+        Component::Separator { separator } => separator
+            .clone()
+            .unwrap_or_else(|| config.default_separator.clone()),
+        Component::DateTime { format } => Local::now().format(format).to_string(),
+        Component::Output { command } => tokio::process::Command::new("sh")
+            .arg("-c")
+            .arg(command)
+            .output()
+            .await
+            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+            .context("output command failed")?,
+
+        _ => todo!(),
+    })
 }
