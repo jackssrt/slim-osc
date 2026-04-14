@@ -7,9 +7,7 @@ use std::sync::Arc;
 use anyhow::{Context, bail};
 use arc_swap::ArcSwap;
 use clap::Parser;
-use notify::Watcher;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
-use tokio::time::Interval;
 
 use crate::{
     args::Args,
@@ -21,19 +19,9 @@ use crate::{
 mod args;
 mod config;
 mod connection;
+mod hot_reloading;
 mod packet;
 mod status;
-
-fn try_reload_config(args: &Args, config: &ArcSwap<Config>, interval: &mut Interval) {
-    let Ok(new_config) = Config::new(args.config_path.clone()) else {
-        tracing::error!("failed to read config, using old one...");
-        return;
-    };
-
-    *interval = tokio::time::interval(new_config.update_interval);
-    config.swap(Arc::new(new_config));
-    tracing::info!("config reloaded successfully");
-}
 
 fn get_refresh_kind(config: &Config) -> RefreshKind {
     // holy builder pattern
@@ -79,30 +67,11 @@ async fn main() -> anyhow::Result<()> {
         .context("failed to open connection")?;
 
     // main loop
-    let (reload_tx, mut reload_rx) = tokio::sync::mpsc::channel(1);
     let mut interval = tokio::time::interval(config.update_interval);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let config = ArcSwap::new(Arc::new(config));
 
-    // hot reloading
-    tracing::info!(
-        "watching config file at {} for changes",
-        args.config_path.display()
-    );
-    let mut watcher =
-        notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
-            let file = event.expect("watcher error");
-            if file.paths.iter().any(|path| path == &args.config_path) && file.kind.is_modify() {
-                tracing::debug!("{:?}", file);
-                let _ = reload_tx.try_send(());
-            }
-        })?;
-    watcher.watch(
-        args.config_path
-            .parent()
-            .context("failed to get parent of config file")?,
-        notify::RecursiveMode::NonRecursive,
-    )?;
+    let mut reload_rx = hot_reloading::setup(args).context("failed to setup hot reloading")?;
 
     // main loop
     let mut system = System::new_with_specifics(refresh_kind);
@@ -114,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
             },
             Some(()) = reload_rx.recv() => {
                 tracing::info!("config file changed, reloading...");
-                try_reload_config(args, &config, &mut interval);
+                hot_reloading::try_reload(args, &config, &mut interval);
             }
             else => bail!("broken channel"),
         }
