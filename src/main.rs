@@ -8,6 +8,7 @@ use anyhow::{Context, bail};
 use arc_swap::ArcSwap;
 use clap::Parser;
 use notify::Watcher;
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use tokio::time::Interval;
 
 use crate::{args::Args, config::Config, packet::send_chat_message, status::get_status_text};
@@ -31,8 +32,8 @@ fn reload_config(
     Ok(())
 }
 
-async fn update_status(socket: &tokio::net::UdpSocket, config: &Config) -> anyhow::Result<()> {
-    let status = get_status_text(config).await?;
+async fn update_status(socket: &tokio::net::UdpSocket, config: &Config, system: &System) -> anyhow::Result<()> {
+    let status = get_status_text(config, system).await?;
     send_chat_message(socket, &status).await?;
     Ok(())
 }
@@ -66,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
             let file = event.expect("watcher error");
             if file.paths.iter().any(|path| path == &args.config_path) && file.kind.is_modify() {
-            	tracing::debug!("{:?}", file);
+                tracing::debug!("{:?}", file);
                 let _ = reload_tx.try_send(());
             }
         })?;
@@ -78,10 +79,17 @@ async fn main() -> anyhow::Result<()> {
     )?;
 
     // main loop
+    let mut system = System::new_with_specifics(
+        RefreshKind::nothing()
+            .with_cpu(CpuRefreshKind::everything())
+            .with_memory(MemoryRefreshKind::everything()),
+    );
+    system.refresh_all();
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                update_status(&socket, &config.load()).await?;
+                system.refresh_all();
+                update_status(&socket, &config.load(), &system).await?;
             },
             Some(()) = reload_rx.recv() => {
                 tracing::info!("config file changed, reloading...");

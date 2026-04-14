@@ -8,9 +8,11 @@ anyhow = "1.0.102"
 arc-swap = "1.9.1"
 chrono = "0.4.44"
 clap = { version = "4.6.0", features = ["derive", "string"] }
+gfxinfo = { version = "0.1.2", features = ["gpu_info"] }
 notify = "8.2.0"
 rosc = "0.11.4"
 serde = { version = "1.0.228", features = ["serde_derive"] }
+sysinfo = "0.38.4"
 tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process", "sync"] }
 toml = "1.1.2"
 tracing = "0.1.44"
