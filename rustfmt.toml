@@ -1,0 +1,8 @@
+unstable_features = true
+imports_granularity = "Crate"
+blank_lines_upper_bound = 1
+blank_lines_lower_bound = 0
+format_macro_matchers = true
+format_macro_bodies = true
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
