@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path};
+use std::{net::IpAddr, path::Path, time::Duration};
 
 use serde::Deserialize;
 
@@ -11,6 +11,8 @@ pub struct Config {
     pub port: u16,
     #[serde(default = "default_separator")]
     pub default_separator: String,
+    #[serde(default = "default_update_interval")]
+    pub update_interval: Duration,
 }
 
 fn default_address() -> IpAddr {
@@ -24,6 +26,9 @@ fn default_port() -> u16 {
 
 fn default_separator() -> String {
     " - ".to_string()
+}
+fn default_update_interval() -> Duration {
+    Duration::from_secs(2)
 }
 
 #[derive(Deserialize, Debug)]

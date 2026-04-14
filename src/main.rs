@@ -2,10 +2,9 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::unwrap_used)]
 #![forbid(unused_must_use)]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Context;
-use tokio::time::{Interval, interval};
 
 use crate::{config::Config, packet::send_chat_message, status::get_status_text};
 
@@ -26,9 +25,11 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("failed to open connection")?;
 
-    // send packet
-    let status = get_status_text(&config);
-    send_chat_message(&socket, &status).await?;
-
-    Ok(())
+    // main loop
+    let mut interval = tokio::time::interval(config.update_interval);
+    loop {
+        interval.tick().await;
+        let status = get_status_text(&config);
+        send_chat_message(&socket, &status).await?;
+    }
 }
