@@ -24,18 +24,17 @@ mod connection;
 mod packet;
 mod status;
 
-fn reload_config(
-    args: &Args,
-    config: &ArcSwap<Config>,
-    interval: &mut Interval,
-) -> anyhow::Result<()> {
-    let new_config =
-        Arc::new(Config::new(args.config_path.clone()).context("failed to read config")?);
+fn try_reload_config(args: &Args, config: &ArcSwap<Config>, interval: &mut Interval) {
+    let Ok(new_config) = Config::new(args.config_path.clone()) else {
+        tracing::error!("failed to read config, using old one...");
+        return;
+    };
+
     *interval = tokio::time::interval(new_config.update_interval);
-    config.swap(new_config);
+    config.swap(Arc::new(new_config));
     tracing::info!("config reloaded successfully");
-    Ok(())
 }
+
 fn get_refresh_kind(config: &Config) -> RefreshKind {
     // holy builder pattern
     let mut refresh_kind = RefreshKind::nothing();
@@ -115,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
             },
             Some(()) = reload_rx.recv() => {
                 tracing::info!("config file changed, reloading...");
-                reload_config(args, &config, &mut interval)?;
+                try_reload_config(args, &config, &mut interval);
             }
             else => bail!("broken channel"),
         }
