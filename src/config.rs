@@ -3,6 +3,7 @@ use std::{net::IpAddr, path::Path, time::Duration};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub components: Vec<Component>,
     #[serde(default = "default_address")]
@@ -11,7 +12,7 @@ pub struct Config {
     pub port: u16,
     #[serde(default = "default_separator")]
     pub default_separator: String,
-    #[serde(default = "default_update_interval")]
+    #[serde(default = "default_update_interval", alias = "refresh_interval")]
     pub update_interval: Duration,
     #[serde(default)]
     pub music_backend: MusicBackend,
