@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
+use chrono::Local;
+
 use crate::config::{Component, Config};
 
-pub fn get_status_text(config: &Config) -> String {
+pub async fn get_status_text(config: &Config) -> String {
     config
         .components
         .iter()
@@ -11,6 +13,7 @@ pub fn get_status_text(config: &Config) -> String {
             Component::Separator { separator } => separator
                 .clone()
                 .unwrap_or_else(|| config.default_separator.clone()),
+            Component::DateTime { format } => Local::now().format(format).to_string(),
             _ => todo!(),
         })
         .collect()

@@ -41,10 +41,8 @@ pub enum Component {
     Text {
         text: String,
     },
-    Date {
-        format: String,
-    },
-    Time {
+    #[serde(alias = "time", alias = "date")]
+    DateTime {
         format: String,
     },
 
