@@ -7,7 +7,12 @@ use tokio::{sync::mpsc::Receiver, time::Interval};
 
 use crate::{args::Args, config::Config};
 
-pub fn try_reload(args: &Args, config: &ArcSwap<Config>, interval: &mut Interval) {
+pub fn try_reload(
+    args: &Args,
+    config: &ArcSwap<Config>,
+    system: &mut sysinfo::System,
+    interval: &mut Interval,
+) {
     let Ok(new_config) = Config::new(args.config_path.clone()) else {
         tracing::error!("failed to read config, using old one...");
         return;
@@ -15,6 +20,7 @@ pub fn try_reload(args: &Args, config: &ArcSwap<Config>, interval: &mut Interval
 
     *interval = tokio::time::interval(new_config.update_interval);
     config.swap(Arc::new(new_config));
+    *system = crate::setup_sysinfo(&config.load());
     tracing::info!("config reloaded successfully");
 }
 
