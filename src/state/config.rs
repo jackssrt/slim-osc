@@ -80,8 +80,8 @@ pub enum MusicBackend {
 }
 
 impl Config {
-    pub fn new(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
+    pub fn new(config_path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let content = std::fs::read_to_string(config_path)?;
         let config = toml::from_str(&content)?;
         tracing::trace!("config loaded: {:?}", config);
         Ok(config)

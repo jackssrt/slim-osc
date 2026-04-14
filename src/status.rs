@@ -1,16 +1,19 @@
 use anyhow::Context;
 use chrono::Local;
-use sysinfo::System;
 use tokio::process::Command;
 
-use crate::config::{Component, Config, MusicBackend};
+use crate::state::{
+    State,
+    config::{Component, MusicBackend},
+};
 
-pub async fn get_status_text(config: &Config, system: &System) -> anyhow::Result<String> {
+pub async fn get_status_text(state: &State) -> anyhow::Result<String> {
     let mut parts = Vec::new();
-    for part in config
+    for part in state
+        .config
         .components
         .iter()
-        .map(|component| get_component_text(component, config, system))
+        .map(|component| get_component_text(state, component))
     {
         parts.push(part.await?);
     }
@@ -25,9 +28,10 @@ async fn get_command_output(command: &mut Command) -> anyhow::Result<String> {
 }
 
 async fn get_component_text(
+    State {
+        metrics, config, ..
+    }: &State,
     component: &Component,
-    config: &Config,
-    system: &System,
 ) -> anyhow::Result<String> {
     Ok(match component {
         Component::Text(text) => text.clone(),
@@ -58,8 +62,8 @@ async fn get_component_text(
                 .await?
             }
         },
-        Component::CpuModel => system.cpus()[0].brand().to_string(),
-        Component::CpuUsage => format!("{:.0}%", system.global_cpu_usage()),
+        Component::CpuModel => metrics.system.cpus()[0].brand().to_string(),
+        Component::CpuUsage => format!("{:.0}%", metrics.system.global_cpu_usage()),
         Component::GpuModel => gfxinfo::active_gpu()
             .map_err(|_| anyhow::anyhow!("failed to get gpu"))?
             .model()
@@ -74,7 +78,7 @@ async fn get_component_text(
         #[allow(clippy::cast_precision_loss)]
         Component::MemoryUsage => format!(
             "{:.0}%",
-            system.used_memory() as f64 / system.total_memory() as f64 * 100.0
+            metrics.system.used_memory() as f64 / metrics.system.total_memory() as f64 * 100.0
         ),
     })
 }

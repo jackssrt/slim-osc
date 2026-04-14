@@ -1,26 +1,16 @@
-use std::sync::Arc;
-
 use anyhow::Context;
-use arc_swap::ArcSwap;
 use notify::Watcher;
-use tokio::{sync::mpsc::Receiver, time::Interval};
+use tokio::sync::mpsc::Receiver;
 
-use crate::{args::Args, config::Config};
+use crate::{args::Args, state::State};
 
-pub fn try_reload(
-    args: &Args,
-    config: &ArcSwap<Config>,
-    system: &mut sysinfo::System,
-    interval: &mut Interval,
-) {
-    let Ok(new_config) = Config::new(args.config_path.clone()) else {
+pub async fn try_reload(args: &'static Args, state: &mut State) {
+    let Ok(new_state) = State::new(args).await else {
         tracing::error!("failed to read config, using old one...");
         return;
     };
 
-    *interval = tokio::time::interval(new_config.update_interval);
-    config.swap(Arc::new(new_config));
-    *system = crate::setup_sysinfo(&config.load());
+    *state = new_state;
     tracing::info!("config reloaded successfully");
 }
 
