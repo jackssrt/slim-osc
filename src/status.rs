@@ -17,12 +17,12 @@ pub async fn get_status_text(config: &Config) -> anyhow::Result<String> {
 
 async fn get_component_text(component: &Component, config: &Config) -> anyhow::Result<String> {
     Ok(match component {
-        Component::Text { text } => text.clone(),
+        Component::Text(text) => text.clone(),
         Component::Separator { separator } => separator
             .clone()
             .unwrap_or_else(|| config.default_separator.clone()),
         Component::DateTime { format } => Local::now().format(format).to_string(),
-        Component::Output { command } => tokio::process::Command::new("sh")
+        Component::Command { command } => tokio::process::Command::new("sh")
             .arg("-c")
             .arg(command)
             .output()

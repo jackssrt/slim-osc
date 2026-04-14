@@ -20,14 +20,14 @@ fn default_address() -> IpAddr {
         .parse()
         .expect("hardcoded ip should always be valid")
 }
-fn default_port() -> u16 {
+const fn default_port() -> u16 {
     9000
 }
 
 fn default_separator() -> String {
     " - ".to_string()
 }
-fn default_update_interval() -> Duration {
+const fn default_update_interval() -> Duration {
     Duration::from_secs(2)
 }
 
@@ -37,9 +37,6 @@ pub enum Component {
     #[serde(alias = "sep")]
     Separator {
         separator: Option<String>,
-    },
-    Text {
-        text: String,
     },
     #[serde(alias = "time", alias = "date")]
     DateTime {
@@ -55,9 +52,13 @@ pub enum Component {
     GpuModel,
     CpuModel,
 
-    Output {
+    #[serde(untagged)]
+    Command {
         command: String,
     },
+
+    #[serde(untagged)]
+    Text(String),
 }
 
 impl Config {
