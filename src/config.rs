@@ -32,7 +32,7 @@ const fn default_update_interval() -> Duration {
 }
 
 #[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Component {
     #[serde(alias = "sep")]
     Separator {
@@ -51,6 +51,11 @@ pub enum Component {
     // Model
     GpuModel,
     CpuModel,
+
+    Playerctl {
+        #[serde(alias = "metadata")]
+        metadata_field: String,
+    },
 
     #[serde(untagged)]
     Command {
