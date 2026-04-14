@@ -12,7 +12,8 @@ pub async fn send_chat_message(socket: &UdpSocket) -> anyhow::Result<()> {
                 false.into(),
             ],
         }),
-    ).await
+    )
+    .await
 }
 async fn send_packet(socket: &UdpSocket, packet: &OscPacket) -> anyhow::Result<()> {
     let encoded = rosc::encoder::encode(packet)?;
