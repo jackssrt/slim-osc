@@ -11,7 +11,12 @@ use notify::Watcher;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use tokio::time::Interval;
 
-use crate::{args::Args, config::Config, packet::send_chat_message, status::get_status_text};
+use crate::{
+    args::Args,
+    config::{Component, Config},
+    packet::send_chat_message,
+    status::get_status_text,
+};
 
 mod args;
 mod config;
@@ -31,8 +36,29 @@ fn reload_config(
     tracing::info!("config reloaded successfully");
     Ok(())
 }
+fn get_refresh_kind(config: &Config) -> RefreshKind {
+    // holy builder pattern
+    let mut refresh_kind = RefreshKind::nothing();
+    for component in &config.components {
+        match component {
+            Component::CpuUsage => {
+                refresh_kind = refresh_kind.with_cpu(CpuRefreshKind::nothing().with_cpu_usage());
+            }
+            Component::MemoryUsage => {
+                refresh_kind = refresh_kind.with_memory(MemoryRefreshKind::nothing().with_ram());
+            }
+            _ => {}
+        }
+    }
+    refresh_kind
+}
 
-async fn update_status(socket: &tokio::net::UdpSocket, config: &Config, system: &System) -> anyhow::Result<()> {
+async fn update_status(
+    socket: &tokio::net::UdpSocket,
+    config: &Config,
+    system: &mut System,
+) -> anyhow::Result<()> {
+    system.refresh_specifics(get_refresh_kind(config));
     let status = get_status_text(config, system).await?;
     send_chat_message(socket, &status).await?;
     Ok(())
@@ -46,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
     // parse args
     let args: &'static _ = Box::leak(Box::new(Args::parse()));
     let config = Config::new(&args.config_path).context("failed to read config")?;
+    let refresh_kind = get_refresh_kind(&config);
 
     // open up connection
     let socket = connection::open(&config)
@@ -79,17 +106,12 @@ async fn main() -> anyhow::Result<()> {
     )?;
 
     // main loop
-    let mut system = System::new_with_specifics(
-        RefreshKind::nothing()
-            .with_cpu(CpuRefreshKind::everything())
-            .with_memory(MemoryRefreshKind::everything()),
-    );
-    system.refresh_all();
+    let mut system = System::new_with_specifics(refresh_kind);
+    system.refresh_specifics(refresh_kind);
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                system.refresh_all();
-                update_status(&socket, &config.load(), &system).await?;
+                update_status(&socket, &config.load(), &mut system).await?;
             },
             Some(()) = reload_rx.recv() => {
                 tracing::info!("config file changed, reloading...");

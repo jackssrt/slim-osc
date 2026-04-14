@@ -74,7 +74,7 @@ async fn get_component_text(
         #[allow(clippy::cast_precision_loss)]
         Component::MemoryUsage => format!(
             "{:.0}%",
-            system.available_memory() as f64 / system.total_memory() as f64 * 100.0
+            system.used_memory() as f64 / system.total_memory() as f64 * 100.0
         ),
     })
 }
