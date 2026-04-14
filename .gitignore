@@ -1,1 +1,4 @@
 /target
+/TODO.md
+/flamegraph.svg
+/perf.data*
