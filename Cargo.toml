@@ -5,9 +5,11 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
+arc-swap = "1.9.1"
 chrono = "0.4.44"
 clap = { version = "4.6.0", features = ["derive", "string"] }
+notify = "8.2.0"
 rosc = "0.11.4"
 serde = { version = "1.0.228", features = ["serde_derive"] }
-tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process"] }
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process", "sync"] }
 toml = "1.1.2"

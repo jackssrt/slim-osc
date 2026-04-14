@@ -1,21 +1,17 @@
-use std::fmt::Display;
-
 use anyhow::Context;
 use chrono::Local;
-use tokio::task::JoinError;
 
 use crate::config::{Component, Config};
 
-pub async fn get_status_text(config: &'static Config) -> anyhow::Result<String> {
+pub async fn get_status_text(config: &Config) -> anyhow::Result<String> {
     let mut parts = Vec::new();
     for part in config
         .components
         .iter()
-        .map(|component| tokio::spawn(get_component_text(component, config)))
+        .map(|component| get_component_text(component, config))
     {
-        parts.push(part.await??);
+        parts.push(part.await?);
     }
-
     Ok(parts.join(""))
 }
 
