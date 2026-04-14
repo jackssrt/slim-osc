@@ -9,6 +9,8 @@ pub struct Config {
     pub address: IpAddr,
     #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default = "default_separator")]
+    pub default_separator: String,
 }
 
 fn default_address() -> IpAddr {
@@ -29,8 +31,7 @@ fn default_separator() -> String {
 pub enum Component {
     #[serde(alias = "sep")]
     Separator {
-        #[serde(default = "default_separator")]
-        separator: String,
+        separator: Option<String>,
     },
     Text {
         text: String,
@@ -50,6 +51,10 @@ pub enum Component {
     // Model
     GpuModel,
     CpuModel,
+
+    Output {
+        command: String,
+    },
 }
 
 impl Config {

@@ -1,16 +1,12 @@
 use rosc::{OscMessage, OscPacket};
 use tokio::net::UdpSocket;
 
-pub async fn send_chat_message(socket: &UdpSocket) -> anyhow::Result<()> {
+pub async fn send_chat_message(socket: &UdpSocket, content: &str) -> anyhow::Result<()> {
     send_packet(
         socket,
         &OscPacket::Message(OscMessage {
             addr: "/chatbox/input".into(),
-            args: vec![
-                format!("Hello world: {}", chrono::Utc::now().to_rfc3339()).into(),
-                true.into(),
-                false.into(),
-            ],
+            args: vec![content.into(), true.into(), false.into()],
         }),
     )
     .await

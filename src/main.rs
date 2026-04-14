@@ -5,12 +5,14 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
+use tokio::time::{Interval, interval};
 
-use crate::{config::Config, packet::send_chat_message};
+use crate::{config::Config, packet::send_chat_message, status::get_status_text};
 
 mod config;
 mod connection;
 mod packet;
+mod status;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -25,5 +27,8 @@ async fn main() -> anyhow::Result<()> {
         .context("failed to open connection")?;
 
     // send packet
+    let status = get_status_text(&config);
+    send_chat_message(&socket, &status).await?;
+
     Ok(())
 }
