@@ -13,3 +13,5 @@ rosc = "0.11.4"
 serde = { version = "1.0.228", features = ["serde_derive"] }
 tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process", "sync"] }
 toml = "1.1.2"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"

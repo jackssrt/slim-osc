@@ -27,7 +27,7 @@ fn reload_config(
         Arc::new(Config::new(args.config_path.clone()).context("failed to read config")?);
     *interval = tokio::time::interval(new_config.update_interval);
     config.swap(new_config);
-    println!("config updated");
+    tracing::info!("config reloaded successfully");
     Ok(())
 }
 
@@ -39,6 +39,9 @@ async fn update_status(socket: &tokio::net::UdpSocket, config: &Config) -> anyho
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // setup logging
+    tracing_subscriber::fmt::init();
+
     // parse args
     let args: &'static _ = Box::leak(Box::new(Args::parse()));
     let config = Config::new(&args.config_path).context("failed to read config")?;
@@ -55,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
     let config = ArcSwap::new(Arc::new(config));
 
     // hot reloading
-    println!(
+    tracing::info!(
         "watching config file at {} for changes",
         args.config_path.display()
     );
@@ -63,8 +66,7 @@ async fn main() -> anyhow::Result<()> {
         notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
             let file = event.expect("watcher error");
             if file.paths.iter().any(|path| path == &args.config_path) && file.kind.is_modify() {
-                dbg!(&file);
-
+            	tracing::debug!("{:?}", file);
                 let _ = reload_tx.try_send(());
             }
         })?;
@@ -82,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
                 update_status(&socket, &config.load()).await?;
             },
             Some(()) = reload_rx.recv() => {
-                println!("config file changed, reloading...");
+                tracing::info!("config file changed, reloading...");
                 reload_config(args, &config, &mut interval)?;
             }
             else => bail!("broken channel"),
