@@ -5,9 +5,11 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use clap::Parser;
 
-use crate::{config::Config, packet::send_chat_message, status::get_status_text};
+use crate::{args::Args, config::Config, packet::send_chat_message, status::get_status_text};
 
+mod args;
 mod config;
 mod connection;
 mod packet;
@@ -15,10 +17,10 @@ mod status;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // TODO: this is linux only
-    let xdg_config: PathBuf = std::env::var("XDG_CONFIG_HOME")?.into();
-    let config =
-        Config::new(xdg_config.join("slim-osc/config.toml")).context("failed to read config")?;
+    // parse args
+    let args = Args::parse();
+    // parse config
+    let config = Config::new(args.config_path).context("failed to read config")?;
 
     // open up connection
     let socket = connection::open(&config)
