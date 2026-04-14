@@ -24,6 +24,7 @@ impl Metrics {
         }
         refresh_kind
     }
+
     pub fn setup(config: &Config) -> Self {
         let refresh_kind = Self::calculate_refresh_kind(config);
         let mut system = System::new_with_specifics(refresh_kind);
@@ -34,6 +35,7 @@ impl Metrics {
             refresh_kind,
         }
     }
+
     pub fn refresh(&mut self) {
         self.system.refresh_specifics(self.refresh_kind);
     }
