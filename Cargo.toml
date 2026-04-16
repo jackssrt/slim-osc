@@ -3,6 +3,12 @@ name = "slim-osc"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+strip = true
+lto = "fat"
+panic = "abort"
+codegen-units = 1
+
 [dependencies]
 anyhow = "1.0.102"
 chrono = "0.4.44"
