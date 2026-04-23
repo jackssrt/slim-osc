@@ -1,5 +1,6 @@
 [package]
 name = "slim-osc"
+description = "incredibly thin program for displaying pc stats in a vrchat message"
 version = "0.1.0"
 edition = "2024"
 
