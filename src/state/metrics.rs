@@ -11,7 +11,7 @@ impl Metrics {
         let mut refresh_kind = RefreshKind::nothing();
         for component in &config.components {
             match component {
-                Component::CpuUsage => {
+                Component::CpuUsage | Component::CpuModel => {
                     refresh_kind =
                         refresh_kind.with_cpu(CpuRefreshKind::nothing().with_cpu_usage());
                 }
