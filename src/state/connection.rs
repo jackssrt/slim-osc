@@ -10,7 +10,7 @@ pub struct Connection {
 impl Connection {
     pub async fn open(&Config { address, port, .. }: &Config) -> anyhow::Result<Self> {
         let socket = UdpSocket::bind("0.0.0.0:0").await?;
-        socket.connect(format!("{address}:{port}")).await?;
+        socket.connect((address, port)).await?;
         tracing::info!("connected");
         Ok(Self { socket })
     }
