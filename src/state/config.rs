@@ -1,4 +1,4 @@
-use std::{net::IpAddr, path::Path, time::Duration};
+use std::{net::IpAddr, path::Path, sync::Arc, time::Duration};
 
 use serde::Deserialize;
 
@@ -11,7 +11,7 @@ pub struct Config {
     #[serde(default = "default_port")]
     pub port: u16,
     #[serde(default = "default_separator")]
-    pub default_separator: String,
+    pub default_separator: Arc<str>,
     #[serde(default = "default_update_interval", alias = "refresh_interval")]
     pub update_interval: Duration,
     #[serde(default)]
@@ -27,8 +27,8 @@ const fn default_port() -> u16 {
     9000
 }
 
-fn default_separator() -> String {
-    " - ".to_string()
+fn default_separator() -> Arc<str> {
+    " - ".into()
 }
 const fn default_update_interval() -> Duration {
     Duration::from_secs(2)
@@ -39,7 +39,7 @@ const fn default_update_interval() -> Duration {
 pub enum Component {
     #[serde(alias = "sep")]
     Separator {
-        separator: Option<String>,
+        separator: Option<Arc<str>>,
     },
     #[serde(alias = "time", alias = "date")]
     DateTime {
@@ -57,7 +57,7 @@ pub enum Component {
 
     Music {
         #[serde(alias = "metadata")]
-        metadata_field: String,
+        metadata_field: Arc<str>,
     },
 
     #[serde(untagged)]
@@ -66,17 +66,31 @@ pub enum Component {
     },
 
     #[serde(untagged)]
-    Text(String),
+    Text(Arc<str>),
 }
 
 #[derive(Deserialize, Debug, Default)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum MusicBackend {
     // maybe replace with raw mpris later?
     #[cfg(target_os = "linux")]
     #[default]
     Playerctl,
-    Mpd,
+    Mpd {
+        #[serde(default = "default_mpd_address")]
+        address: IpAddr,
+        #[serde(default = "default_mpd_port")]
+        port: u16,
+    },
+}
+
+fn default_mpd_address() -> IpAddr {
+    "127.0.0.1"
+        .parse()
+        .expect("hardcoded ip should always be valid")
+}
+fn default_mpd_port() -> u16 {
+    6600
 }
 
 impl Config {

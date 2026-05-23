@@ -1,19 +1,21 @@
 pub mod config;
 pub mod connection;
-mod interval;
-mod metrics;
+pub mod interval;
+pub mod metrics;
+pub mod mpd;
 
 use anyhow::Context;
 
 use crate::{
     args::Args,
-    state::{config::Config, connection::Connection, metrics::Metrics},
+    state::{config::Config, connection::Connection, metrics::Metrics, mpd::Mpd},
 };
 
 pub struct State {
     pub config: Config,
     pub connection: Connection,
     pub metrics: Metrics,
+    pub mpd: Option<Mpd>,
     pub interval: tokio::time::Interval,
 }
 impl State {
@@ -23,6 +25,7 @@ impl State {
             connection: Connection::open(&config).await?,
             metrics: Metrics::setup(&config),
             interval: interval::new(&config),
+            mpd: Mpd::new(&config),
             config,
         })
     }

@@ -18,9 +18,10 @@ gfxinfo = { version = "0.1.2", features = ["gpu_info"] }
 notify = "8.2.0"
 notify-debouncer-full = "0.7.0"
 rosc = "0.11.4"
-serde = { version = "1.0.228", features = ["serde_derive"] }
+serde = { version = "1.0.228", features = ["rc", "serde_derive"] }
 sysinfo = "0.38.4"
-tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process", "sync"] }
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "net", "macros", "time", "process", "sync", "io-util"] }
+tokio-util = "0.7.18"
 toml = "1.1.2"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
