@@ -89,7 +89,7 @@ fn default_mpd_address() -> IpAddr {
         .parse()
         .expect("hardcoded ip should always be valid")
 }
-fn default_mpd_port() -> u16 {
+const fn default_mpd_port() -> u16 {
     6600
 }
 

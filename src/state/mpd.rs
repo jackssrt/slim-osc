@@ -3,8 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufStream},
     net::{TcpStream, ToSocketAddrs},
-    sync::{oneshot, watch},
-    task::JoinHandle,
+    sync::watch,
 };
 use tokio_util::sync::CancellationToken;
 
