@@ -33,7 +33,9 @@ impl Socket {
 
     #[instrument(skip(self), level = Level::TRACE, ret, err(level = Level::ERROR))]
     pub async fn get_metadata(&mut self) -> anyhow::Result<Metadata> {
-        let metadata = self.send_command("currentsong").await?;
+        let metadata = self
+            .send_command("command_list_begin\nstatus\ncurrentsong\ncommand_list_end")
+            .await?;
         let metadata = metadata
             .lines()
             .filter_map(|line| line.split_once(": "))

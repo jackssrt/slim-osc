@@ -77,13 +77,16 @@ impl Source {
                 metadata: field_name,
             } => match config.music_backend {
                 #[cfg(target_os = "linux")]
-                MusicBackend::Playerctl => get_command_output(
-                    Command::new("playerctl")
-                        .arg("metadata")
-                        .arg(field_name.to_string()),
-                )
-                .await?
-                .into(),
+                MusicBackend::Playerctl => {
+                    let mut command = Command::new("playerctl");
+                    get_command_output(if field_name.as_ref() == "status" {
+                        command.arg("status")
+                    } else {
+                        command.arg("metadata").arg(field_name.to_string())
+                    })
+                    .await?
+                    .into()
+                }
                 MusicBackend::Mpd { .. } => mpd
                     .as_ref()
                     .map(|mpd| {
