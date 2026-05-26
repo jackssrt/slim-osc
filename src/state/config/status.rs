@@ -5,7 +5,7 @@ use chumsky::{
     error::Rich,
     extra,
     primitive::{choice, just, none_of},
-    text::digits,
+    text,
 };
 use serde::{Deserialize, Deserializer};
 
@@ -109,10 +109,10 @@ where
         choice((just("subscript"), just("sub"))).to(Filter::Subscript),
         choice((just("superscript"), just("super"))).to(Filter::Superscript),
         choice((just("marquee"), just("scroll"))).ignore_then(
-            digits(10)
+            text::int(10)
                 .to_slice()
                 .then_ignore(just(",").padded())
-                .then(digits(10).to_slice().or_not())
+                .then(text::int(10).to_slice().or_not())
                 .delimited_by(just("("), just(")"))
                 .map(|(left, right): (&str, Option<&str>)| Filter::Marquee {
                     // TODO: should probably not fail silently hereee...
@@ -121,7 +121,7 @@ where
                 }),
         ),
         choice((just("truncate"), just("trunc"), just("trun")))
-            .ignore_then(digits(10).to_slice().delimited_by(just("("), just(")")))
+            .ignore_then(text::int(10).to_slice().delimited_by(just("("), just(")")))
             .map(|length: &str| Filter::Truncate {
                 length: length.parse().unwrap_or(10),
             }),
