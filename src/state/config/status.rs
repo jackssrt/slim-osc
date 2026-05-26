@@ -47,6 +47,7 @@ pub enum Filter {
     Superscript,
     Marquee { length: usize, period: f64 },
     Truncate { length: usize },
+    Map(Vec<(Arc<str>, Arc<str>)>),
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +126,21 @@ where
             .map(|length: &str| Filter::Truncate {
                 length: length.parse().unwrap_or(10),
             }),
+        choice((just("map"), just("m")))
+            .ignore_then(
+                none_of("=")
+                    .padded()
+                    .repeated()
+                    .collect::<String>()
+                    .then_ignore(just("=>").padded())
+                    .then(none_of(",)").padded().repeated().collect::<String>())
+                    .map(|(from, to)| (from.into(), to.into()))
+                    .separated_by(just(",").padded())
+                    .at_least(1)
+                    .collect::<Vec<(Arc<str>, Arc<str>)>>()
+                    .delimited_by(just("("), just(")")),
+            )
+            .map(Filter::Map),
     ));
     // { source (| filter)* }
     let interpolation = source

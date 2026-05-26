@@ -299,6 +299,11 @@ impl Filter {
                     input.to_string()
                 }
             }
+            Self::Map(mappings) => mappings
+                .iter()
+                .find(|(from, _)| from.as_ref() == input)
+                .map_or(input, |(_, to)| to.as_ref())
+                .to_string(),
         }
     }
 }
