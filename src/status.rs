@@ -270,7 +270,6 @@ impl Filter {
 
                 let chars = input.chars().collect::<Vec<char>>();
                 let mut windows = chars.windows(*target_length);
-                // user has bigger problems if theyre living before 1970
 
                 #[allow(clippy::cast_sign_loss)]
                 #[allow(clippy::cast_possible_truncation)]
