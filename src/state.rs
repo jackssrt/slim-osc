@@ -1,14 +1,14 @@
 pub mod config;
 pub mod connection;
-pub mod interval;
 pub mod metrics;
 pub mod mpd;
+pub mod timer;
 
 use anyhow::Context;
 
 use crate::{
     args::Args,
-    state::{config::Config, connection::Connection, metrics::Metrics, mpd::Mpd},
+    state::{config::Config, connection::Connection, metrics::Metrics, mpd::Mpd, timer::Timer},
 };
 
 pub struct State {
@@ -16,7 +16,7 @@ pub struct State {
     pub connection: Connection,
     pub metrics: Metrics,
     pub mpd: Option<Mpd>,
-    pub interval: tokio::time::Interval,
+    pub timer: Timer,
 }
 impl State {
     pub async fn new(args: &'static Args) -> anyhow::Result<Self> {
@@ -24,7 +24,7 @@ impl State {
         Ok(Self {
             connection: Connection::open(&config).await?,
             metrics: Metrics::setup(&config),
-            interval: interval::new(&config),
+            timer: Timer::new(&config),
             mpd: Mpd::new(&config),
             config,
         })

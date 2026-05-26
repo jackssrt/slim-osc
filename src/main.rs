@@ -17,6 +17,7 @@ async fn update_status(state: &mut State) -> anyhow::Result<()> {
     state.metrics.refresh();
     let status = status::get_status_text(state).await?;
     state.connection.send_chat_message(&status).await?;
+    state.timer.update_count += 1;
     Ok(())
 }
 
@@ -36,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         tokio::select! {
-            _ = state.interval.tick() => {
+            _ = state.timer.update_interval.tick() => {
                 update_status(&mut state).await?;
             },
             Some(()) = reload_rx.recv() => {

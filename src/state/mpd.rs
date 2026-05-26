@@ -6,8 +6,12 @@ use tokio::{
     sync::watch,
 };
 use tokio_util::sync::CancellationToken;
+use tracing::{Level, instrument};
 
-use crate::state::config::{Config, MusicBackend};
+use crate::state::config::{
+    Config, MusicBackend,
+    status::{Component, Source},
+};
 
 pub type Metadata = HashMap<Arc<str>, Arc<str>>;
 
@@ -20,31 +24,42 @@ impl Socket {
 
         // technically dont need to allocate a string on the heap here for this could just not care about the bytes at all
         // but this is faster to write
-        socket
-            .read_line(&mut String::with_capacity("OK MPD X.XX.X".len()))
-            .await?;
+        let mut buf = String::with_capacity("OK MPD X.XX.X".len());
+        socket.read_line(&mut buf).await?;
+        tracing::trace!("handshake complete, {} is the greeting", buf.trim());
 
         Ok(Self(socket))
     }
 
+    #[instrument(skip(self), level = Level::TRACE, ret, err(level = Level::ERROR))]
     pub async fn get_metadata(&mut self) -> anyhow::Result<Metadata> {
         let metadata = self.send_command("currentsong").await?;
         let metadata = metadata
             .lines()
             .filter_map(|line| line.split_once(": "))
-            .map(|(key, value)| (Arc::from(key), Arc::from(value)))
+            .map(|(key, value)| (Arc::from(key.to_lowercase()), Arc::from(value)))
             .collect();
         Ok(metadata)
     }
 
+    #[instrument(skip(self), level = Level::TRACE, ret, err(level = Level::ERROR))]
     async fn send_command(&mut self, packet: &str) -> anyhow::Result<String> {
         self.0.write_all(packet.as_bytes()).await?;
+        // send a newline to show we're done
+        self.0.write_all(&[0x0A]).await?;
+        self.0.flush().await?;
+        tracing::trace!("command sent");
         let mut buf = String::new();
 
         // read until we get "OK\n"
         loop {
             const END_PATTERN: &str = "OK\n";
-            self.0.read_line(&mut buf).await?;
+            if self.0.read_line(&mut buf).await? == 0 {
+                return Err(anyhow::anyhow!(
+                    "connection closed while waiting for response"
+                ));
+            }
+            tracing::trace!("new buffer {}", buf);
 
             if buf.ends_with(END_PATTERN) {
                 buf.truncate(buf.len() - END_PATTERN.len());
@@ -65,15 +80,20 @@ impl Mpd {
             // #notmymusicbackend
             return None;
         };
-        if !config
-            .components
-            .iter()
-            .any(|component| matches!(component, crate::state::config::Component::Music { .. }))
-        {
+        if !config.status.iter().any(|component| {
+            matches!(
+                component,
+                Component::Interpolation {
+                    source: Source::Music { .. },
+                    ..
+                }
+            )
+        }) {
             // music component not used
             return None;
         }
 
+        tracing::debug!("hello world!");
         let (tx, rx) = watch::channel(None);
         let cancel = CancellationToken::new();
         {
@@ -91,15 +111,27 @@ impl Mpd {
         cancel: CancellationToken,
         address: impl ToSocketAddrs,
     ) -> anyhow::Result<()> {
+        async fn update_metadata(
+            socket: &mut Socket,
+            tx: &watch::Sender<Option<Metadata>>,
+        ) -> anyhow::Result<()> {
+            tracing::debug!("updating metadata");
+            let metadata = socket.get_metadata().await?;
+            tx.send_replace(Some(metadata));
+            Ok(())
+        }
+        tracing::debug!("spawned");
         let mut socket = Socket::new(address).await?;
+        tracing::debug!("connected");
+        update_metadata(&mut socket, &tx).await?;
         loop {
             tokio::select! {
                 Ok(_) = socket.send_command("idle") => {
-                    let metadata = socket.get_metadata().await?;
-                    tx.send_replace(Some(metadata));
+                    update_metadata(&mut socket, &tx).await?;
                 }
                 // if we get an abort signal, OR if the channel is closed we die
                 () = cancel.cancelled() => {
+                    tracing::debug!("bye world!");
                     return Ok(());
                 }
             }

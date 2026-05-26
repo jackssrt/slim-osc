@@ -2,16 +2,20 @@ use std::{net::IpAddr, path::Path, sync::Arc, time::Duration};
 
 use serde::Deserialize;
 
+use crate::state::config::status::Component;
+pub mod status;
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
-    pub components: Vec<Component>,
+    #[serde(deserialize_with = "status::deserialize")]
+    pub status: Vec<Component>,
     #[serde(default = "default_address")]
     pub address: IpAddr,
     #[serde(default = "default_port")]
     pub port: u16,
     #[serde(default = "default_separator")]
-    pub default_separator: Arc<str>,
+    pub separator: Arc<str>,
     #[serde(default = "default_update_interval", alias = "refresh_interval")]
     pub update_interval: Duration,
     #[serde(default)]
@@ -31,42 +35,7 @@ fn default_separator() -> Arc<str> {
     " - ".into()
 }
 const fn default_update_interval() -> Duration {
-    Duration::from_secs(2)
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum Component {
-    #[serde(alias = "sep")]
-    Separator {
-        separator: Option<Arc<str>>,
-    },
-    #[serde(alias = "time", alias = "date")]
-    DateTime {
-        format: String,
-    },
-
-    // Usage
-    GpuUsage,
-    CpuUsage,
-    MemoryUsage,
-
-    // Model
-    GpuModel,
-    CpuModel,
-
-    Music {
-        #[serde(alias = "metadata")]
-        metadata_field: Arc<str>,
-    },
-
-    #[serde(untagged)]
-    Command {
-        command: String,
-    },
-
-    #[serde(untagged)]
-    Text(Arc<str>),
+    Duration::from_secs(1)
 }
 
 #[derive(Deserialize, Debug, Default)]
