@@ -15,7 +15,6 @@ impl Connection {
         Ok(Self { socket })
     }
 
-    #[instrument(skip(self), level = Level::TRACE, ret)]
     pub async fn send_chat_message(&self, content: &str) -> anyhow::Result<()> {
         self.send_packet(&OscPacket::Message(OscMessage {
             addr: "/chatbox/input".into(),

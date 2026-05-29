@@ -61,7 +61,6 @@ impl Socket {
                     "connection closed while waiting for response"
                 ));
             }
-            tracing::trace!("new buffer {}", buf);
 
             if buf.ends_with(END_PATTERN) {
                 buf.truncate(buf.len() - END_PATTERN.len());
