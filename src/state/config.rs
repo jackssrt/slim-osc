@@ -1,5 +1,6 @@
-use std::{net::IpAddr, path::Path, sync::Arc, time::Duration};
+use std::{fs, net::IpAddr, path::Path, sync::Arc, time::Duration};
 
+use anyhow::Context;
 use serde::Deserialize;
 
 use crate::state::config::status::Component;
@@ -63,9 +64,46 @@ const fn default_mpd_port() -> u16 {
 }
 
 impl Config {
-    pub fn new(config_path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let content = std::fs::read_to_string(config_path)?;
-        let config = toml::from_str(&content)?;
+    pub fn new(config_path: &Path) -> anyhow::Result<Self> {
+        let content = match std::fs::read_to_string(config_path) {
+            Ok(content) => content,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // slight security vulnerability here since someone could invoke us with an arbitrary config path
+                // and make us create empty files somewhere we're not supposed to, meh
+
+                // can't make a default config (custom components deserializer prevents us from being able to serialize a Config)
+                // but will at least touch the file
+                tracing::warn!(
+                    "config file not found at {}, trying to make an empty one",
+                    config_path.display()
+                );
+
+                // looks weird but this will call fs::create_dir with the parent directory if it exists
+                // and ignore errors
+                fs::create_dir_all(
+                    config_path
+                        .parent()
+                        .context("failed to get parent directory of config file")?,
+                )
+                .context("failed to create parent directories of config file")?;
+
+                // okay enjoy
+                fs::File::create_new(config_path).context("failed to create config file")?;
+
+                return Err(e).context(format!(
+                    "config file not found at {}",
+                    config_path.display()
+                ));
+            }
+            Err(e) => {
+                return Err(e).context(format!(
+                    "failed to read config at {}",
+                    config_path.display()
+                ));
+            }
+        };
+
+        let config = toml::from_str(&content).context("failed to parse config")?;
         tracing::trace!("config loaded: {:?}", config);
         Ok(config)
     }

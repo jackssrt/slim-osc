@@ -12,7 +12,7 @@ fn default_config_path() -> PathBuf {
             .unwrap_or_else(|_| "~/.config".into())
             .into()
     };
-    config_home.join("slim-osc/config.toml")
+    config_home.join("slim-osc").join("config.toml")
 }
 
 #[derive(Parser)]
