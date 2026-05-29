@@ -7,3 +7,6 @@ run:
 
 build:
 	cargo build --release
+
+profile:
+	CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --release
