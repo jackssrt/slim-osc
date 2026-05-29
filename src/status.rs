@@ -8,7 +8,7 @@ use crate::state::{
     State,
     config::{
         MusicBackend,
-        status::{Component, Filter, Source},
+        status::{Component, Filter, MusicProperty, Source},
     },
     timer::Timer,
 };
@@ -73,33 +73,35 @@ impl Source {
                     .await?
                     .into(),
             ),
-            Self::Music {
-                metadata: field_name,
-            } => match config.music_backend {
+            Self::Music(music_property) => match config.music_backend {
                 #[cfg(target_os = "linux")]
                 MusicBackend::Playerctl => {
                     let mut command = Command::new("playerctl");
                     Some(
-                        get_command_output(if field_name.as_ref() == "status" {
-                            command.arg("status")
-                        } else {
-                            command.arg("metadata").arg(field_name.to_string())
+                        get_command_output(match music_property {
+                            MusicProperty::Status => command.arg("status"),
+                            MusicProperty::Metadata(field_name) => {
+                                command.arg("metadata").arg(field_name.to_string())
+                            }
                         })
                         .await?
                         .into(),
                     )
                 }
-                MusicBackend::Mpd { .. } => Some(
-                    mpd.as_ref()
-                        .map(|mpd| {
-                            mpd.metadata
-                                .borrow()
-                                .as_ref()
-                                .and_then(|metadata| metadata.get(field_name).cloned())
-                                .unwrap_or_else(|| "unknown".into())
-                        })
-                        .expect("mpd should be initialized if the music backend is mpd"),
-                ),
+                MusicBackend::Mpd { .. } => mpd
+                    .as_ref()
+                    .expect("mpd should be initialized if the music backend is mpd")
+                    .metadata
+                    .borrow()
+                    .as_ref()
+                    .and_then(|metadata| {
+                        metadata
+                            .get(match music_property {
+                                MusicProperty::Status => "state",
+                                MusicProperty::Metadata(field_name) => field_name.as_ref(),
+                            })
+                            .cloned()
+                    }),
             },
             // TODO: optimize model ones by caching them
             Self::CpuModel => Some(metrics.system.cpus()[0].brand().into()),

@@ -26,15 +26,19 @@ pub enum Source {
     GpuModel,
     CpuModel,
 
-    Music {
-        metadata: Arc<str>,
-    },
+    Music(MusicProperty),
 
     Command {
         // this is a string because its more efficient to use it later, can't convert a smart pointer to str to an &OsStr grr
         command: String,
     },
     Text(Arc<str>),
+}
+#[derive(Debug, Clone)]
+#[deny(dead_code)] // use it in the parser
+pub enum MusicProperty {
+    Status,
+    Metadata(Arc<str>),
 }
 
 #[derive(Debug, Clone)]
@@ -94,11 +98,12 @@ where
         just("command")
             .ignore_then(one_fn_param)
             .map(|command| Source::Command { command }),
-        just("music")
-            .ignore_then(one_fn_param)
-            .map(|metadata| Source::Music {
-                metadata: metadata.into(),
-            }),
+        just("music").ignore_then(one_fn_param).map(|param| {
+            Source::Music(match param.as_str() {
+                "status" => MusicProperty::Status,
+                other => MusicProperty::Metadata(other.into()),
+            })
+        }),
         just("text")
             .ignore_then(one_fn_param)
             .map(|text| Source::Text(text.into())),
