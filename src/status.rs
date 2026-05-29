@@ -4,6 +4,12 @@ use anyhow::Context;
 use cached::once;
 use chrono::Local;
 use tokio::process::Command;
+#[cfg(target_os = "windows")]
+use windows::Media::Control::{
+    // literally have to come up with my own names because the windows api is so bad
+    GlobalSystemMediaTransportControlsSessionManager as MediaControlsSessionManager,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus as MediaControlsPlaybackStatus,
+};
 
 use crate::state::{
     State,
@@ -76,7 +82,7 @@ impl Source {
             ..
         }: &State,
     ) -> anyhow::Result<Arc<str>> {
-        let text = match self {
+        let text: Option<_> = match self {
             Self::Text(text) => Some(text.clone()),
             Self::Separator => Some(config.separator.clone()),
             Self::DateTime { format } => Some(Local::now().format(format).to_string().into()),
@@ -118,6 +124,44 @@ impl Source {
                         MusicProperty::Metadata(field_name) => field_name.as_ref(),
                     })
                     .cloned(),
+                #[cfg(target_os = "windows")]
+                MusicBackend::MediaSession => {
+                    let manager = MediaControlsSessionManager::RequestAsync()
+                        .context("failed to get media session manager")?
+                        .await
+                        .context("failed to get media session manager")?;
+
+                    let session = manager.GetCurrentSession()?;
+
+                    match music_property {
+                        MusicProperty::Status => {
+                            match session.GetPlaybackInfo()?.PlaybackStatus()? {
+                                MediaControlsPlaybackStatus::Playing => Some("playing".into()),
+                                MediaControlsPlaybackStatus::Paused => Some("paused".into()),
+                                MediaControlsPlaybackStatus::Stopped => Some("stopped".into()),
+                                _ => None,
+                            }
+                        }
+                        MusicProperty::Metadata(field_name) => {
+                            let media_properties = session.TryGetMediaPropertiesAsync()?.await?;
+                            match field_name.as_ref() {
+                                "title" => media_properties
+                                    .Title()
+                                    .ok()
+                                    .map(|x| x.to_string_lossy().into()),
+                                "artist" => media_properties
+                                    .Artist()
+                                    .ok()
+                                    .map(|x| x.to_string_lossy().into()),
+                                "album" => media_properties
+                                    .AlbumTitle()
+                                    .ok()
+                                    .map(|x| x.to_string_lossy().into()),
+                                _ => None,
+                            }
+                        }
+                    }
+                }
             },
             Self::CpuModel => Some(get_cpu_model(metrics)),
             Self::CpuUsage => Some(format!("{:.0}%", metrics.system.global_cpu_usage()).into()),

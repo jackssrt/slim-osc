@@ -52,6 +52,9 @@ pub enum MusicBackend {
         #[serde(default = "default_mpd_port")]
         port: u16,
     },
+    #[default]
+    #[cfg(target_os = "windows")]
+    MediaSession,
 }
 
 fn default_mpd_address() -> IpAddr {
