@@ -93,15 +93,11 @@ impl Source {
                     .expect("mpd should be initialized if the music backend is mpd")
                     .metadata
                     .borrow()
-                    .as_ref()
-                    .and_then(|metadata| {
-                        metadata
-                            .get(match music_property {
-                                MusicProperty::Status => "state",
-                                MusicProperty::Metadata(field_name) => field_name.as_ref(),
-                            })
-                            .cloned()
-                    }),
+                    .get(match music_property {
+                        MusicProperty::Status => "state",
+                        MusicProperty::Metadata(field_name) => field_name.as_ref(),
+                    })
+                    .cloned(),
             },
             // TODO: optimize model ones by caching them
             Self::CpuModel => Some(metrics.system.cpus()[0].brand().into()),

@@ -71,15 +71,15 @@ impl Socket {
 }
 
 pub struct Mpd {
-    pub metadata: watch::Receiver<Option<Metadata>>,
+    pub metadata: watch::Receiver<Metadata>,
     pub cancel: CancellationToken,
 }
 impl Mpd {
     /// returns None if MPD isn't used in the config.
-    pub fn new(config: &Config) -> Option<Self> {
+    pub async fn new(config: &Config) -> anyhow::Result<Option<Self>> {
         let MusicBackend::Mpd { address, port } = config.music_backend else {
             // #notmymusicbackend
-            return None;
+            return Ok(None);
         };
         if !config.status.iter().any(|component| {
             matches!(
@@ -91,44 +91,48 @@ impl Mpd {
             )
         }) {
             // music component not used
-            return None;
+            return Ok(None);
         }
 
         tracing::debug!("hello world!");
-        let (tx, rx) = watch::channel(None);
         let cancel = CancellationToken::new();
+
+        // setup the socket here so we have the data immediately
+        let mut socket = Socket::new((address, port)).await?;
+        tracing::debug!("connected");
+        let metadata = socket.get_metadata().await?;
+        let (tx, rx) = watch::channel(metadata);
+
         {
             let cancel = cancel.clone();
-            tokio::spawn(Self::run(tx, cancel, (address, port)));
+            tokio::spawn(Self::run(tx, socket, cancel));
         }
-        Some(Self {
+        Ok(Some(Self {
             metadata: rx,
             cancel,
-        })
+        }))
     }
 
-    async fn run(
-        tx: watch::Sender<Option<Metadata>>,
-        cancel: CancellationToken,
-        address: impl ToSocketAddrs,
+    #[instrument(skip(socket, tx), level = Level::TRACE, err(level = Level::ERROR))]
+    async fn update_metadata(
+        socket: &mut Socket,
+        tx: &watch::Sender<Metadata>,
     ) -> anyhow::Result<()> {
-        async fn update_metadata(
-            socket: &mut Socket,
-            tx: &watch::Sender<Option<Metadata>>,
-        ) -> anyhow::Result<()> {
-            tracing::debug!("updating metadata");
-            let metadata = socket.get_metadata().await?;
-            tx.send_replace(Some(metadata));
-            Ok(())
-        }
-        tracing::debug!("spawned");
-        let mut socket = Socket::new(address).await?;
-        tracing::debug!("connected");
-        update_metadata(&mut socket, &tx).await?;
+        let metadata = socket.get_metadata().await?;
+        tx.send_replace(metadata);
+        Ok(())
+    }
+
+    #[instrument(skip_all, level = Level::TRACE, err(level = Level::ERROR))]
+    async fn run(
+        tx: watch::Sender<Metadata>,
+        mut socket: Socket,
+        cancel: CancellationToken,
+    ) -> anyhow::Result<()> {
         loop {
             tokio::select! {
                 Ok(_) = socket.send_command("idle") => {
-                    update_metadata(&mut socket, &tx).await?;
+                    Self::update_metadata(&mut socket, &tx).await?;
                 }
                 // if we get an abort signal, OR if the channel is closed we die
                 () = cancel.cancelled() => {

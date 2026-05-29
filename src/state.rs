@@ -25,7 +25,7 @@ impl State {
             connection: Connection::open(&config).await?,
             metrics: Metrics::setup(&config),
             timer: Timer::new(&config),
-            mpd: Mpd::new(&config),
+            mpd: Mpd::new(&config).await?,
             config,
         })
     }
