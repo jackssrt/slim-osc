@@ -64,62 +64,62 @@ impl Source {
             ..
         }: &State,
     ) -> anyhow::Result<Arc<str>> {
-        Ok(match self {
-            Self::Text(text) => text.clone(),
-            Self::Separator => config.separator.clone(),
-            Self::DateTime { format } => Local::now().format(format).to_string().into(),
-            Self::Command { command } => {
+        let text = match self {
+            Self::Text(text) => Some(text.clone()),
+            Self::Separator => Some(config.separator.clone()),
+            Self::DateTime { format } => Some(Local::now().format(format).to_string().into()),
+            Self::Command { command } => Some(
                 get_command_output(Command::new("sh").arg("-c").arg(command))
                     .await?
-                    .into()
-            }
+                    .into(),
+            ),
             Self::Music {
                 metadata: field_name,
             } => match config.music_backend {
                 #[cfg(target_os = "linux")]
                 MusicBackend::Playerctl => {
                     let mut command = Command::new("playerctl");
-                    get_command_output(if field_name.as_ref() == "status" {
-                        command.arg("status")
-                    } else {
-                        command.arg("metadata").arg(field_name.to_string())
-                    })
-                    .await?
-                    .into()
+                    Some(
+                        get_command_output(if field_name.as_ref() == "status" {
+                            command.arg("status")
+                        } else {
+                            command.arg("metadata").arg(field_name.to_string())
+                        })
+                        .await?
+                        .into(),
+                    )
                 }
-                MusicBackend::Mpd { .. } => mpd
-                    .as_ref()
-                    .map(|mpd| {
-                        mpd.metadata
-                            .borrow()
-                            .as_ref()
-                            .and_then(|metadata| metadata.get(field_name).cloned())
-                            .unwrap_or_else(|| "unknown".into())
-                    })
-                    .expect("mpd should be initialized if the music backend is mpd"),
+                MusicBackend::Mpd { .. } => Some(
+                    mpd.as_ref()
+                        .map(|mpd| {
+                            mpd.metadata
+                                .borrow()
+                                .as_ref()
+                                .and_then(|metadata| metadata.get(field_name).cloned())
+                                .unwrap_or_else(|| "unknown".into())
+                        })
+                        .expect("mpd should be initialized if the music backend is mpd"),
+                ),
             },
             // TODO: optimize model ones by caching them
-            Self::CpuModel => metrics.system.cpus()[0].brand().into(),
-            Self::CpuUsage => format!("{:.0}%", metrics.system.global_cpu_usage()).into(),
-            Self::GpuModel => gfxinfo::active_gpu()
-                .map_err(|_| anyhow::anyhow!("failed to get gpu"))?
-                .model()
-                .into(),
-            Self::GpuUsage => format!(
-                "{:}%",
-                gfxinfo::active_gpu()
-                    .map_err(|_| anyhow::anyhow!("failed to get gpu"))?
-                    .info()
-                    .load_pct()
-            )
-            .into(),
+            Self::CpuModel => Some(metrics.system.cpus()[0].brand().into()),
+            Self::CpuUsage => Some(format!("{:.0}%", metrics.system.global_cpu_usage()).into()),
+            Self::GpuModel => gfxinfo::active_gpu().map(|gpu| gpu.model().into()).ok(),
+            Self::GpuUsage => gfxinfo::active_gpu()
+                .map(|gpu| format!("{:.0}%", gpu.info().load_pct()).into())
+                .ok(),
             #[allow(clippy::cast_precision_loss)]
-            Self::MemoryUsage => format!(
-                "{:.0}%",
-                metrics.system.used_memory() as f64 / metrics.system.total_memory() as f64 * 100.0
-            )
-            .into(),
-        })
+            Self::MemoryUsage => Some(
+                format!(
+                    "{:.0}%",
+                    metrics.system.used_memory() as f64 / metrics.system.total_memory() as f64
+                        * 100.0
+                )
+                .into(),
+            ),
+        };
+
+        Ok(text.unwrap_or_else(|| "unknown".into()))
     }
 }
 
