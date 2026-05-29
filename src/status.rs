@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
+use cached::once;
 use chrono::Local;
 use tokio::process::Command;
 
@@ -10,6 +11,7 @@ use crate::state::{
         MusicBackend,
         status::{Component, Filter, MusicProperty, Source},
     },
+    metrics::Metrics,
     timer::Timer,
 };
 
@@ -52,6 +54,16 @@ impl Component {
         };
         Ok(text)
     }
+}
+
+#[once]
+fn get_gpu_model() -> Option<Arc<str>> {
+    gfxinfo::active_gpu().map(|gpu| gpu.model().into()).ok()
+}
+
+#[once]
+fn get_cpu_model(metrics: &Metrics) -> Arc<str> {
+    metrics.system.cpus()[0].brand().into()
 }
 
 impl Source {
@@ -99,10 +111,9 @@ impl Source {
                     })
                     .cloned(),
             },
-            // TODO: optimize model ones by caching them
-            Self::CpuModel => Some(metrics.system.cpus()[0].brand().into()),
+            Self::CpuModel => Some(get_cpu_model(metrics)),
             Self::CpuUsage => Some(format!("{:.0}%", metrics.system.global_cpu_usage()).into()),
-            Self::GpuModel => gfxinfo::active_gpu().map(|gpu| gpu.model().into()).ok(),
+            Self::GpuModel => get_gpu_model(),
             Self::GpuUsage => gfxinfo::active_gpu()
                 .map(|gpu| format!("{:.0}%", gpu.info().load_pct()).into())
                 .ok(),
