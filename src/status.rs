@@ -80,11 +80,19 @@ impl Source {
             Self::Text(text) => Some(text.clone()),
             Self::Separator => Some(config.separator.clone()),
             Self::DateTime { format } => Some(Local::now().format(format).to_string().into()),
-            Self::Command { command } => Some(
-                get_command_output(Command::new("sh").arg("-c").arg(command))
-                    .await?
-                    .into(),
-            ),
+            Self::Command { command } => {
+                let (executable, flag) = if cfg!(target_os = "windows") {
+                    ("powershell", "-Command")
+                } else {
+                    ("sh", "-c")
+                };
+                Some(
+                    get_command_output(Command::new(executable).arg(flag).arg(command))
+                        .await?
+                        .into(),
+                )
+            }
+
             Self::Music(music_property) => match config.music_backend {
                 #[cfg(target_os = "linux")]
                 MusicBackend::Playerctl => {
