@@ -8,10 +8,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use tracing::{Level, instrument};
 
-use crate::state::config::{
-    Config, MusicBackend,
-    status::{Component, Source},
-};
+use crate::state::config::{Component, Config, MusicBackend, Source};
 
 pub type Metadata = HashMap<Arc<str>, Arc<str>>;
 

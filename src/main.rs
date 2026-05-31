@@ -6,16 +6,18 @@
 use anyhow::{Context, bail};
 use clap::Parser;
 
-use crate::{args::Args, state::State};
+use crate::{
+    args::Args,
+    state::{State, config},
+};
 
 mod args;
 mod hot_reloading;
 mod state;
-mod status;
 
 async fn update_status(state: &mut State) -> anyhow::Result<()> {
     state.metrics.refresh();
-    let status = status::get_status_text(state).await?;
+    let status = config::eval_status(state).await?;
     state.connection.send_chat_message(&status).await?;
     state.timer.update_count += 1;
     Ok(())

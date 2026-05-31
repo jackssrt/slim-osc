@@ -9,59 +9,7 @@ use chumsky::{
 };
 use serde::{Deserialize, Deserializer};
 
-#[derive(Debug, Clone)]
-#[deny(dead_code)] // use it in the parser
-pub enum Source {
-    Separator,
-    DateTime {
-        format: String,
-    },
-
-    // Usage
-    GpuUsage,
-    CpuUsage,
-    MemoryUsage,
-
-    // Model
-    GpuModel,
-    CpuModel,
-
-    Music(MusicProperty),
-
-    Command {
-        // this is a string because its more efficient to use it later, can't convert a smart pointer to str to an &OsStr grr
-        command: String,
-    },
-    Text(Arc<str>),
-}
-#[derive(Debug, Clone)]
-#[deny(dead_code)] // use it in the parser
-pub enum MusicProperty {
-    Status,
-    Metadata(Arc<str>),
-}
-
-#[derive(Debug, Clone)]
-#[deny(dead_code)] // use it in the parser
-pub enum Filter {
-    Uppercase,
-    Lowercase,
-    Trim,
-    Subscript,
-    Superscript,
-    Marquee { length: usize, period: f64 },
-    Truncate { length: usize },
-    Map(Vec<(Arc<str>, Arc<str>)>),
-}
-
-#[derive(Debug, Clone)]
-pub enum Component {
-    Text(Arc<str>),
-    Interpolation {
-        source: Source,
-        filters: Vec<Filter>,
-    },
-}
+use crate::state::config::{Component, Filter, Source, source::MusicProperty};
 
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<Component>, D::Error>
 where

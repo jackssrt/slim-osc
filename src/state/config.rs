@@ -3,13 +3,19 @@ use std::{fs, net::IpAddr, path::Path, sync::Arc, time::Duration};
 use anyhow::Context;
 use serde::Deserialize;
 
-use crate::state::config::status::Component;
-pub mod status;
+mod component;
+mod filter;
+mod parser;
+mod source;
+
+pub use component::{Component, eval_status};
+pub use filter::Filter;
+pub use source::Source;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
-    #[serde(deserialize_with = "status::deserialize")]
+    #[serde(deserialize_with = "parser::deserialize")]
     pub status: Vec<Component>,
     #[serde(default = "default_address")]
     pub address: IpAddr,

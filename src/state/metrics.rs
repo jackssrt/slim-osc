@@ -1,9 +1,6 @@
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 
-use crate::state::config::{
-    Config,
-    status::{Component, Source},
-};
+use crate::state::config::{Component, Config, Source};
 pub struct Metrics {
     pub system: System,
     refresh_kind: RefreshKind,
