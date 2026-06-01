@@ -1,5 +1,7 @@
 # slim-osc
 
+[![GitHub Release](https://img.shields.io/github/v/release/jackssrt/slim-osc)](https://github.com/jackssrt/slim-osc/releases)
+
 an incredibly thin program for displaying pc stats in a vrchat message using [osc](https://wiki.vrchat.com/wiki/Open_Sound_Control#Chatbox).
 
 this project is licensed under the [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE).
