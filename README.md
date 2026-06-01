@@ -9,6 +9,13 @@ this project is licensed under the [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-AP
 1. download the latest release from the [releases page](https://github.com/jackssrt/slim-osc/releases)
 2. configure according to [the configuration docs](#configuration).
 
+## screenshots
+
+<details>
+	<summary>screenshots</summary>
+	<img alt="screenshot of vrchat showing the status being displayed" src="docs/assets/images/1.png" />
+</details>
+
 ## configuration
 
 the configuration is stored in a [toml](https://toml.io/en/) file whose location is
