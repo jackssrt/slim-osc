@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+#[cfg(target_os = "windows")]
+use anyhow::Context as _;
 use chrono::Local;
 use tokio::process::Command;
 #[cfg(target_os = "windows")]
