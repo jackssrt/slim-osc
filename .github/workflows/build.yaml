@@ -1,0 +1,47 @@
+name: Build
+
+on:
+    push:
+        branches: [master]
+    workflow_dispatch:
+    pull_request:
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v5
+
+            - name: Install Rust (Linux)
+              if: runner.os == 'Linux'
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Cache dependencies
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+            - name: Build
+              run: |
+                  cargo build --release
+              shell: bash
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: release-${{ matrix.os }}
+                  path: |
+                      target/release/slim-osc*
+                      target/release/slim-osc*.exe
