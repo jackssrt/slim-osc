@@ -1,6 +1,6 @@
 # slim-osc
 
-[![GitHub Release](https://img.shields.io/github/v/release/jackssrt/slim-osc)](https://github.com/jackssrt/slim-osc/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/jackssrt/slim-osc)](https://github.com/jackssrt/slim-osc/releases) [![available on the aur](https://img.shields.io/badge/available%20on-the%20aur-blue?logo=archlinux)](https://aur.archlinux.org/packages/slim-osc-git)
 
 an incredibly thin program for displaying pc stats in a vrchat message using [osc](https://wiki.vrchat.com/wiki/Open_Sound_Control#Chatbox).
 
@@ -10,6 +10,18 @@ this project is licensed under the [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-AP
 
 1. download the latest release from the [releases page](https://github.com/jackssrt/slim-osc/releases)
 2. configure according to [the configuration docs](#configuration).
+
+### arch linux
+
+install `slim-osc-git` from the aur.
+
+```sh
+paru slim-osc-git
+```
+
+```sh
+yay slim-osc-git
+```
 
 ## screenshots
 
