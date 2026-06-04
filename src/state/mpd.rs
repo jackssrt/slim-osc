@@ -10,7 +10,7 @@ use tracing::{Level, instrument};
 
 use crate::state::config::{Component, Config, MusicBackend, Source};
 
-pub type Metadata = HashMap<Arc<str>, Arc<str>>;
+pub type Metadata = HashMap<Box<str>, Arc<str>>;
 
 /// A socket that is connected to the MPD server and past the initial handshake.
 struct Socket(BufStream<TcpStream>);
@@ -36,7 +36,7 @@ impl Socket {
         let metadata = metadata
             .lines()
             .filter_map(|line| line.split_once(": "))
-            .map(|(key, value)| (Arc::from(key.to_lowercase()), Arc::from(value)))
+            .map(|(key, value)| (key.to_lowercase().into(), Arc::from(value)))
             .collect();
         Ok(metadata)
     }
