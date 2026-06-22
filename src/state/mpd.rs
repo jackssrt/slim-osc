@@ -54,9 +54,7 @@ impl Socket {
         loop {
             const END_PATTERN: &str = "OK\n";
             if self.0.read_line(&mut buf).await? == 0 {
-                return Err(anyhow::anyhow!(
-                    "connection closed while waiting for response"
-                ));
+                anyhow::bail!("connection closed while waiting for response");
             }
 
             if buf.ends_with(END_PATTERN) {
