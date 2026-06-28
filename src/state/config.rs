@@ -30,7 +30,7 @@ pub struct Config {
 }
 
 fn default_address() -> IpAddr {
-    "0.0.0.0"
+    "127.0.0.1"
         .parse()
         .expect("hardcoded ip should always be valid")
 }
