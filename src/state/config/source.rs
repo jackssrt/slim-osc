@@ -1,28 +1,21 @@
 use std::sync::Arc;
 
-#[cfg(target_os = "windows")]
-use anyhow::Context as _;
 use chrono::Local;
 use tokio::process::Command;
-#[cfg(target_os = "windows")]
-use windows::Media::Control::{
-    // literally have to come up with my own names because the windows api is so bad
-    GlobalSystemMediaTransportControlsSessionManager as MediaControlsSessionManager,
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus as MediaControlsPlaybackStatus,
-};
 
 use crate::state::{State, config::MusicBackend};
 
 mod helpers {
     use std::sync::Arc;
 
-    use anyhow::Context;
+    #[cfg(target_os = "windows")]
+    use crate::state::config::source::MusicProperty;
+    use crate::state::metrics::Metrics;
+    use anyhow::{Context, Result};
     use cached::once;
     use tokio::process::Command;
 
-    use crate::state::metrics::Metrics;
-
-    pub(super) async fn get_command_output(command: &mut Command) -> anyhow::Result<String> {
+    pub(super) async fn get_command_output(command: &mut Command) -> Result<String> {
         command
             .output()
             .await
@@ -38,6 +31,73 @@ mod helpers {
     #[once]
     pub(super) fn get_cpu_model(metrics: &Metrics) -> Arc<str> {
         metrics.system.cpus()[0].brand().into()
+    }
+
+    #[cfg(target_os = "windows")]
+    pub(super) async fn handle_windows_media_session_music(
+        music_property: &MusicProperty,
+    ) -> Result<Option<Arc<str>>> {
+        use windows::Media::Control::{
+            // literally have to come up with my own names because the windows api is so bad
+            GlobalSystemMediaTransportControlsSessionManager as MediaControlsSessionManager,
+            GlobalSystemMediaTransportControlsSessionPlaybackStatus as MediaControlsPlaybackStatus,
+        };
+
+        use crate::state::config::source::MusicProperty;
+        let manager = MediaControlsSessionManager::RequestAsync()
+            .context("failed to get media session manager")?
+            .await
+            .context("failed to get media session manager")?;
+
+        // this returns an error if nothing is playing
+        // just ignore the error and report it as nothing playing
+        let Ok(session) = manager.GetCurrentSession() else {
+            return Ok(None);
+        };
+
+        match music_property {
+            MusicProperty::Status => {
+                Ok(Some(
+                    match session
+                        .GetPlaybackInfo()
+                        .context("failed to get playback info")?
+                        .PlaybackStatus()
+                        .context("failed to get playback status")?
+                    {
+                        MediaControlsPlaybackStatus::Playing => "playing".into(),
+                        MediaControlsPlaybackStatus::Paused => "paused".into(),
+                        MediaControlsPlaybackStatus::Stopped => "stopped".into(),
+                        MediaControlsPlaybackStatus::Changing => "changing".into(),
+                        MediaControlsPlaybackStatus::Opened => "opened".into(),
+                        MediaControlsPlaybackStatus::Closed => "closed".into(),
+                        // why windows api, why is this not a real enum
+                        _ => unreachable!(),
+                    },
+                ))
+            }
+            MusicProperty::Metadata(field_name) => {
+                let media_properties = session
+                    .TryGetMediaPropertiesAsync()
+                    .context("failed to get media properties")?
+                    .await
+                    .context("failed to get media properties")?;
+                Ok(match field_name.as_ref() {
+                    "title" => media_properties
+                        .Title()
+                        .ok()
+                        .map(|x| x.to_string_lossy().into()),
+                    "artist" => media_properties
+                        .Artist()
+                        .ok()
+                        .map(|x| x.to_string_lossy().into()),
+                    "album" => media_properties
+                        .AlbumTitle()
+                        .ok()
+                        .map(|x| x.to_string_lossy().into()),
+                    _ => None,
+                })
+            }
+        }
     }
 }
 
@@ -127,41 +187,15 @@ impl Source {
                     .cloned(),
                 #[cfg(target_os = "windows")]
                 MusicBackend::MediaSession => {
-                    let manager = MediaControlsSessionManager::RequestAsync()
-                        .context("failed to get media session manager")?
+                    helpers::handle_windows_media_session_music(music_property)
                         .await
-                        .context("failed to get media session manager")?;
-
-                    let session = manager.GetCurrentSession()?;
-
-                    match music_property {
-                        MusicProperty::Status => {
-                            match session.GetPlaybackInfo()?.PlaybackStatus()? {
-                                MediaControlsPlaybackStatus::Playing => Some("playing".into()),
-                                MediaControlsPlaybackStatus::Paused => Some("paused".into()),
-                                MediaControlsPlaybackStatus::Stopped => Some("stopped".into()),
-                                _ => None,
-                            }
-                        }
-                        MusicProperty::Metadata(field_name) => {
-                            let media_properties = session.TryGetMediaPropertiesAsync()?.await?;
-                            match field_name.as_ref() {
-                                "title" => media_properties
-                                    .Title()
-                                    .ok()
-                                    .map(|x| x.to_string_lossy().into()),
-                                "artist" => media_properties
-                                    .Artist()
-                                    .ok()
-                                    .map(|x| x.to_string_lossy().into()),
-                                "album" => media_properties
-                                    .AlbumTitle()
-                                    .ok()
-                                    .map(|x| x.to_string_lossy().into()),
-                                _ => None,
-                            }
-                        }
-                    }
+                        .unwrap_or_else(|err| {
+                            tracing::warn!(
+                                "failed to get music from windows MediaSession, {}",
+                                err
+                            );
+                            None
+                        })
                 }
             },
             Self::CpuModel => Some(helpers::get_cpu_model(metrics)),
