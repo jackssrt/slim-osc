@@ -17,6 +17,6 @@ fn default_config_path() -> PathBuf {
 
 #[derive(Parser)]
 pub struct Args {
-    #[arg(short, long, default_value=default_config_path().into_os_string())]
+    #[arg(short, long, default_value_os_t=default_config_path())]
     pub config_path: PathBuf,
 }
