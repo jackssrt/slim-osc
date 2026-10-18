@@ -102,14 +102,14 @@ mod helpers {
 }
 
 #[derive(Debug, Clone)]
-#[deny(dead_code)] // use it in the parser
+#[deny(dead_code, reason = "use it in `crate::state::config::parser`")]
 pub enum MusicProperty {
     Status,
     Metadata(Arc<str>),
 }
 
 #[derive(Debug, Clone)]
-#[deny(dead_code)] // use it in the parser
+#[deny(dead_code, reason = "use it in `crate::state::config::parser`")]
 pub enum Source {
     Separator,
     DateTime {
