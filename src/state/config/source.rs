@@ -8,12 +8,13 @@ use crate::state::{State, config::MusicBackend};
 mod helpers {
     use std::sync::Arc;
 
-    #[cfg(target_os = "windows")]
-    use crate::state::config::source::MusicProperty;
-    use crate::state::metrics::Metrics;
     use anyhow::{Context, Result};
     use cached::once;
     use tokio::process::Command;
+
+    #[cfg(target_os = "windows")]
+    use crate::state::config::source::MusicProperty;
+    use crate::state::metrics::Metrics;
 
     pub(super) async fn get_command_output(command: &mut Command) -> Result<String> {
         command
