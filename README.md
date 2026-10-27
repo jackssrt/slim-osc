@@ -33,6 +33,7 @@ yay slim-osc-git
 ## configuration
 
 the configuration is stored in a [toml](https://toml.io/en/) file whose location is
+
 - passed in using `--config`
 - by default on windows: `%APPDATA%\slim-osc\config.toml`
 - by default elsewhere: `$XDG_CONFIG_HOME/slim-osc/config.toml` (defaults to `~/.config/slim-osc/config.toml`)
@@ -40,9 +41,10 @@ the configuration is stored in a [toml](https://toml.io/en/) file whose location
 the program will hot reload the configuration if it detects a change to it.
 
 ### example
+
 ```toml
 # multi-line string - learn more at https://toml.io/en/
-status = """\ 
+status = """\
 {time(%H'%M) | superscript}{sep}{music(status) | lower | map(playing => :D, paused => :c, stopped => @.@)}{sep}{music(title) | marquee(10,20)} ᵇʸ {music(artist) | trunc(10)}\
 {cpu_usage} ᶜᵖᵘ{sep}{gpu_usage} ᵍᵖᵘ{sep}{memory_usage} ᵐᵉᵐ\
 """
@@ -66,27 +68,27 @@ PS. dsl = domain specific language
 
 `status = "{music(title)}"` => `Never Gonna Give You Up`  
 `status = "{music(title) | lowercase}"` => `never gonna give you up`  
-`status = "{music(title) | lowercase | superscript}"` => `ⁿᵉᵛᵉʳ ᵍᵒⁿⁿᵃ ᵍᶦᵛᵉ ʸᵒᵘ ᵘᵖ`  
+`status = "{music(title) | lowercase | superscript}"` => `ⁿᵉᵛᵉʳ ᵍᵒⁿⁿᵃ ᵍᶦᵛᵉ ʸᵒᵘ ᵘᵖ`
 
 ### sources
 
 #### separator / sep
 
 evaluates to whatever the separator specified in the config file is.
-`status = "{sep}"` => ` - `  
+`status = "{sep}"` => `-`
 
 #### datetime / time / date
 
 takes in a format passed to `chrono` which supports [these escape sequences](https://docs.rs/chrono/latest/chrono/format/strftime/index.html).
 
 `status = "{time(%H:%S)}` => `04:02` (please go to bed)  
-`status = "{date(%Y.%m.%d)}` => `2026.06.01`  
+`status = "{date(%Y.%m.%d)}` => `2026.06.01`
 
 #### command / cmd
 
 basic command source. available everywhere. outputs stdout of the command you pass in.
 
-`status = "{command(whoami)}` => `jack`  
+`status = "{command(whoami)}` => `jack`
 
 #### music
 
@@ -98,45 +100,52 @@ some common ones: status, title, artist
 `status = "{music(status)}"` => `Playing` (with playerctl)  
 `status = "{music(status)}"` => `Paused` (with playerctl)  
 `status = "{music(status)}"` => `play` (with mpd)  
-`status = "{music(status)}"` => `pause` (with mpd)  
+`status = "{music(status)}"` => `pause` (with mpd)
 
 #### cpu_model
 
 outputs the model of your cpu.
 
-`status = "{cpu_model}"` => `AMD Ryzen™ 7 5800X3D`  
+`status = "{cpu_model}"` => `AMD Ryzen™ 7 5800X3D`
 
 #### gpu_model
 
 outputs the model of your gpu.
 
-`status = "{gpu_model}"` => `AMD Radeon™ RX 9070 XT`  
+`status = "{gpu_model}"` => `AMD Radeon™ RX 9070 XT`
 
 #### cpu_usage
 
 outputs the usage percentage of your cpu.
 
-`status = "{cpu_usage}"` => `90%`  
+`status = "{cpu_usage}"` => `90%`
 
 #### gpu_usage
 
 outputs the usage percentage of your gpu.
 
-`status = "{gpu_usage}"` => `100%`  
+`status = "{gpu_usage}"` => `100%`
 
 #### memory_usage
 
 outputs the ratio between allocated and available memory as a percentage.
 fun fact: your available memory is still being used by your operating system to cache files. if you ever see that you don't have any "free" memory, it's normal. [read more](https://linuxatemyram.com)
 
-`status = "{gpu_usage}"` => `50%`  
+`status = "{gpu_usage}"` => `50%`
+
+#### cycle / alternate
+
+alternates the literal options it gets over a period, which is by default 2 updates.
+
+`status = "{cycle(hi, hello, hello world, howdy, 5)}"` => `hi` then `hello` etc
+`status = "{cycle(hi, hello, hello world, howdy)}"` => `hi` then `hello` etc
 
 #### text
 
 discouraged, perform whatever filters you have manually and don't use an
 interpolation. added because i know people are going to do it anyways and spawning echo in a shell is even worse than just adding this.
 
-`status = "{text(test)}"` => `test`  
+`status = "{text(test)}"` => `test`
 
 ### filters
 
@@ -144,43 +153,43 @@ interpolation. added because i know people are going to do it anyways and spawni
 
 UPPERCASES whatever its given.
 
-`status = "{whoami | upper}"` => `JACK`  
+`status = "{whoami | upper}"` => `JACK`
 
 #### lowercase / lower
 
 lowercases whatever its given.
 
-`status = "{whoami | lower}"` => `jack`  
+`status = "{whoami | lower}"` => `jack`
 
 #### trim / strip
 
 remove extra whitespace (spaces, tabs whatnot) around whatever its given.
 
-`status = "{text "   some spaces around me   " | trim}"` => `some spaces around me`  
+`status = "{text "   some spaces around me   " | trim}"` => `some spaces around me`
 
 #### superscript / sup
 
 converts whatever it's passed in to ˢᵘᵖᵉʳˢᶜʳᶦᵖᵗ. basically just tiny letters above normal ones. not all letters or symbols have superscript variants. unsupported characters (letters and symbols) are left untouched.
 
-`status = "{cmd(whoami) | superscript}"` => `ʲᵃᶜᵏ`  
+`status = "{cmd(whoami) | superscript}"` => `ʲᵃᶜᵏ`
 
 #### subscript / sub
 
 tries its best to convert whatever it's passed in to ₛᵤbₛcᵣᵢₚₜ. basically just tiny letters below normal ones. not all letters or symbols have superscript variants. unsupported characters (letters and symbols) are left untouched.
 
-`status = "{cmd(whoami) | superscript}"` => `ⱼₐcₖ`  
+`status = "{cmd(whoami) | superscript}"` => `ⱼₐcₖ`
 
 #### marquee / scroll
 
 scrolls whatever you pass it in, takes in a target length and a period (how long one rotation should take).
 
-`status = "{music(title) | marquee(8, 10)}"` => `Never go` (will take 10 updates to scroll the full title across 4 characters)  
+`status = "{music(title) | marquee(8, 10)}"` => `Never go` (will take 10 updates to scroll the full title across 4 characters)
 
 #### truncate / trunc / trun
 
 cuts off whatever is passed in after a target length, if its cut off replace the last character with an ellipsis.
 
-`status = "{music(title) | trunc(8)}"` => `Never g…`  
+`status = "{music(title) | trunc(8)}"` => `Never g…`
 
 #### map / m
 

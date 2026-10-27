@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Local;
 use tokio::process::Command;
 
-use crate::state::{State, config::MusicBackend};
+use crate::state::{State, config::MusicBackend, timer::Timer};
 
 mod helpers {
     use std::sync::Arc;
@@ -133,6 +133,10 @@ pub enum Source {
         command: String,
     },
     Text(Arc<str>),
+    CycleText {
+        text: Vec<String>,
+        period: u32,
+    },
 }
 impl Source {
     pub(super) async fn eval(
@@ -141,11 +145,17 @@ impl Source {
             metrics,
             config,
             mpd,
+            timer: Timer { update_count, .. },
             ..
         }: &State,
     ) -> anyhow::Result<Arc<str>> {
         let text: Option<_> = match self {
             Self::Text(text) => Some(text.clone()),
+            Self::CycleText { text, period } => {
+                #[allow(clippy::cast_possible_truncation)]
+                let index = (update_count / u64::from(*period)) as usize % text.len();
+                Some(text[index].clone().into())
+            }
             Self::Separator => Some(config.separator.clone()),
             Self::DateTime { format } => Some(Local::now().format(format).to_string().into()),
             Self::Command { command } => {

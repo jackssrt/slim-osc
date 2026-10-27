@@ -55,6 +55,23 @@ where
         just("text")
             .ignore_then(one_fn_param)
             .map(|text| Source::Text(text.into())),
+        choice((just("alternate"), just("cycle")))
+            .ignore_then(
+                none_of(",)")
+                    .padded()
+                    .repeated()
+                    .collect::<String>()
+                    .separated_by(just(","))
+                    .at_least(1)
+                    .collect::<Vec<_>>()
+                    .then_ignore(just(",").or_not())
+                    .then(text::int(10).to_slice().or_not())
+                    .delimited_by(just("("), just(")")),
+            )
+            .map(|(options, period)| Source::CycleText {
+                text: options,
+                period: period.map(str::parse).and_then(Result::ok).unwrap_or(2),
+            }),
     ));
     let filter = choice((
         choice((just("uppercase"), just("upper"))).to(Filter::Uppercase),
