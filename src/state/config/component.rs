@@ -36,14 +36,14 @@ impl Component {
 }
 
 pub async fn eval_status(state: &State) -> anyhow::Result<String> {
-    let mut parts = Vec::new();
+    let mut output = String::new();
     for part in state
         .config
         .status
         .iter()
         .map(|component| component.eval(state))
     {
-        parts.push(part.await?);
+        output.push_str(&part.await?);
     }
-    Ok(parts.join(""))
+    Ok(output)
 }
